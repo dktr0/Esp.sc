@@ -49,7 +49,10 @@ Esp {
 				}
 				,"/esp/chat/receive"
 			).permanent_(true);
-		}
+		};
+
+		// resend /esp/subscribe every 2 seconds in case EspGrid is started second, or restarted
+		SkipJack.new( {Esp.send.sendMsg("/esp/subscribe")}, 2, clock: SystemClock);
 	}
 }
 
