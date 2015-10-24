@@ -22,19 +22,23 @@ Esp {
 	classvar <send; // cached NetAddr for communication from SC to EspGrid
     classvar <>clockAdjust; // manual adjustment for when you have a high latency, remote EspGrid (NOT recommended)
 
-	*gridAddress_ { |x| gridAddress = x; send = NetAddr(gridAddress,5510); }
+	*gridAddress_ {
+		|x|
+		gridAddress = x;
+		send = NetAddr(gridAddress,5510);
+		send.sendMsg("/esp/subscribe");
+	}
 
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "21 October 2015 (EspGrid 0.51.3)";
+		version = "24 October 2015 (EspGrid 0.52.1)";
 		("Esp.sc: " + version).postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required".postln;
 		});
-		gridAddress = "127.0.0.1";
-		send = NetAddr(gridAddress,5510);
-        clockAdjust = 0.0;
+		Esp.gridAddress = "127.0.0.1";
+		clockAdjust = 0.0;
 
 		StartUp.add {
 			OSCdef(\espChat,
