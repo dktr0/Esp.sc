@@ -1,0 +1,7 @@
+(
+  name: "Esp",
+  summary: "Provides Esp and EspClock classes to interface with EspGrid",
+  version: "0.53.0",
+  license: "GPLv3",
+  copyright: "David Ogborn, 2013-2015"
+)
