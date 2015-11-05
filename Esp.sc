@@ -48,6 +48,8 @@ Esp {
 	classvar <clockMode;
 	classvar <gridVersion;
 
+	classvar <>verbose; // set to true for detailed logging to console
+
 	*gridAddress_ {
 		|x|
 		gridAddress = x;
@@ -62,8 +64,9 @@ Esp {
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "25 October 2015 (EspGrid 0.53.1)";
+		version = "5 November 2015";
 		("Esp.sc: " + version).postln;
+		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.5".postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required".postln;
 		});
@@ -120,6 +123,7 @@ EspClock : TempoClock {
 				OSCdef(\espClock,
 					{
 						| msg,time,addr,port |
+						if(Esp.verbose,{msg.postln});
 						clockDiff = msg[1]+(msg[2]*0.000000001) - SystemClock.seconds;
 					},
 					"/esp/clock/r").permanent_(true);
@@ -137,6 +141,10 @@ EspClock : TempoClock {
 					var beat = msg[5];
 					super.beats_((SystemClock.seconds - time + clockDiff + Esp.clockAdjust) * freq + beat);
 					super.tempo_(freq);
+					if(Esp.verbose,{
+						msg.postln;
+						[SystemClock.seconds,clockDiff,SystemClock.seconds+clockDiff].postln;
+					});
 				});
 			},"/esp/tempo/r").permanent_(true);
         SkipJack.new( {Esp.send.sendMsg("/esp/tempo/q");}, 0.05, clock: SystemClock);
