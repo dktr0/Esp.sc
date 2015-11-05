@@ -70,6 +70,7 @@ Esp {
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required".postln;
 		});
+		verbose = false;
 		Esp.gridAddress = "127.0.0.1";
 		clockAdjust = 0.0;
 
