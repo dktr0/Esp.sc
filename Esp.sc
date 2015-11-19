@@ -64,9 +64,9 @@ Esp {
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "5 November 2015";
+		version = "19 November 2015";
 		("Esp.sc: " + version).postln;
-		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.5".postln;
+		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.6".postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required".postln;
 		});
@@ -121,15 +121,7 @@ EspClock : TempoClock {
 				// but having Main.monotonicClockTime should be a big improvement for now!
 			},{
 				" WARNING: SuperCollider does NOT have Main.monotonicClockTime, using /esp/clock/q".postln;
-				OSCdef(\espClock,
-					{
-						| msg,time,addr,port |
-						if(Esp.verbose,{msg.postln});
-						clockDiff = msg[1]+(msg[2]*0.000000001) - SystemClock.seconds;
-					},
-					"/esp/clock/r").permanent_(true);
-				Esp.send.sendMsg("/esp/clock/q");
-				SkipJack.new( {Esp.send.sendMsg("/esp/clock/q");}, 10.0, clock: SystemClock);
+				SkipJack.new( {this.espClockQ}, 10.0, clock: SystemClock);
 		});
 
 		OSCdef(\espTempo,
@@ -145,10 +137,26 @@ EspClock : TempoClock {
 					if(Esp.verbose,{
 						msg.postln;
 						[SystemClock.seconds,clockDiff,SystemClock.seconds+clockDiff].postln;
+						if(Main.respondsTo(\monotonicClockTime),{
+							Main.monotonicClockTime.postln;
+						});
 					});
 				});
 			},"/esp/tempo/r").permanent_(true);
         SkipJack.new( {Esp.send.sendMsg("/esp/tempo/q");}, 0.05, clock: SystemClock);
+	}
+
+	espClockQ {
+		// this method is meant to be used as a workaround on systems where Main.monotonicClockTime
+		// is not reporting (or not reporting accurately) the lowest level monotonic motherboard clock.
+		OSCdef(\espClock,
+			{
+				| msg,time,addr,port |
+				if(Esp.verbose,{msg.postln});
+				clockDiff = msg[1]+(msg[2]*0.000000001) - SystemClock.seconds;
+				("new clockDiff is " ++ (clockDiff.asString)).postln;
+			},"/esp/clock/r").permanent_(true);
+		Esp.send.sendMsg("/esp/clock/q");
 	}
 
 }
