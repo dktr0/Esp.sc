@@ -64,7 +64,7 @@ Esp {
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "19 November 2015";
+		version = "24 November 2015";
 		("Esp.sc: " + version).postln;
 		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.6".postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
@@ -115,7 +115,8 @@ EspClock : TempoClock {
 
 		if(Main.respondsTo(\monotonicClockTime),
 			{
-				clockDiff = Main.monotonicClockTime - SystemClock.seconds;
+				clockDiff = Main.monotonicClockTime - Main.elapsedTime;
+				(" difference between monotonic clock and scheduling time is " ++ (clockDiff.asString)).postln;
 				// Note: what we really need is access to the logical difference between
 				// SuperCollider's logical SystemClock time and the monotonicClockTime
 				// but having Main.monotonicClockTime should be a big improvement for now!
