@@ -64,7 +64,7 @@ Esp {
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "24 November 2015";
+		version = "3 December 2015";
 		("Esp.sc: " + version).postln;
 		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.6".postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
@@ -100,6 +100,9 @@ Esp {
 
 EspClock : TempoClock {
 
+	// public variables:
+	var <adjustments; // number of times tempo messages have been received from EspGrid
+
 	// private variables:
 	var clockDiff; // difference between SystemClock.seconds and Main.monotonicClockTime
 
@@ -107,11 +110,13 @@ EspClock : TempoClock {
 	pause { Esp.send.sendMsg("/esp/beat/on",0); }
 	start { Esp.send.sendMsg("/esp/beat/on",1); }
 	tempo_ {|t| if(t<10,{Esp.send.sendMsg("/esp/beat/tempo", t * 60);},{"tempo too high".postln;});}
+	// adjustments { ^adjustments; }
 
  	init {
 		| tempo,beats,seconds,queueSize |
 		super.init(0.000000001,beats,seconds,queueSize);
 		permanent = true;
+		adjustments = 0;
 
 		if(Main.respondsTo(\monotonicClockTime),
 			{
@@ -133,11 +138,18 @@ EspClock : TempoClock {
 					var freq = if(on==1,msg[2]/60,0.000000001);
 					var time = msg[3] + (msg[4]*0.000000001);
 					var beat = msg[5];
-					super.beats_((SystemClock.seconds - time + clockDiff + Esp.clockAdjust) * freq + beat);
+					var target = (SystemClock.seconds + clockDiff + Esp.clockAdjust - time) * freq + beat;
+					var adjust = target - super.beats;
+					if((adjustments>10) && (adjust>1), {
+						"warning: EspClock adjustment greater than one beat".postln;
+						target = super.beats + 1;
+					});
+					super.beats_(target);
 					super.tempo_(freq);
+					adjustments = adjustments + 1;
 					if(Esp.verbose,{
 						msg.postln;
-						[SystemClock.seconds,clockDiff,SystemClock.seconds+clockDiff].postln;
+						[adjust,SystemClock.seconds,clockDiff,SystemClock.seconds+clockDiff].postln;
 						if(Main.respondsTo(\monotonicClockTime),{
 							Main.monotonicClockTime.postln;
 						});
