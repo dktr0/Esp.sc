@@ -64,9 +64,9 @@ Esp {
 	*chat { |x| send.sendMsg("/esp/chat/send",x); }
 
 	*initClass {
-		version = "3 December 2015";
+		version = "1 January 2016";
 		("Esp.sc: " + version).postln;
-		" recommended minimum EspGrid version to use with this Esp.sc: 0.53.6".postln;
+		" recommended minimum EspGrid version to use with this Esp.sc: 0.54.0".postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required".postln;
 		});
@@ -103,14 +103,10 @@ EspClock : TempoClock {
 	// public variables:
 	var <adjustments; // number of times tempo messages have been received from EspGrid
 
-	// private variables:
-	var clockDiff; // difference between SystemClock.seconds and Main.monotonicClockTime
-
 	// public methods:
 	pause { Esp.send.sendMsg("/esp/beat/on",0); }
 	start { Esp.send.sendMsg("/esp/beat/on",1); }
 	tempo_ {|t| if(t<10,{Esp.send.sendMsg("/esp/beat/tempo", t * 60);},{"tempo too high".postln;});}
-	// adjustments { ^adjustments; }
 
  	init {
 		| tempo,beats,seconds,queueSize |
@@ -118,58 +114,25 @@ EspClock : TempoClock {
 		permanent = true;
 		adjustments = 0;
 
-		if(Main.respondsTo(\monotonicClockTime),
-			{
-				clockDiff = Main.monotonicClockTime - Main.elapsedTime;
-				(" difference between monotonic clock and scheduling time is " ++ (clockDiff.asString)).postln;
-				// Note: what we really need is access to the logical difference between
-				// SuperCollider's logical SystemClock time and the monotonicClockTime
-				// but having Main.monotonicClockTime should be a big improvement for now!
-			},{
-				" WARNING: SuperCollider does NOT have Main.monotonicClockTime, using /esp/clock/q".postln;
-				SkipJack.new( {this.espClockQ}, 10.0, clock: SystemClock);
-		});
-
 		OSCdef(\espTempo,
 			{
-				| msg,time,addr,port |
-				if(clockDiff.notNil,{
-					var on = msg[1];
-					var freq = if(on==1,msg[2]/60,0.000000001);
-					var time = msg[3] + (msg[4]*0.000000001);
-					var beat = msg[5];
-					var target = (SystemClock.seconds + clockDiff + Esp.clockAdjust - time) * freq + beat;
-					var adjust = target - super.beats;
-					if((adjustments>10) && (adjust>1), {
-						"warning: EspClock adjustment greater than one beat".postln;
-						target = super.beats + 1;
-					});
-					super.beats_(target);
-					super.tempo_(freq);
-					adjustments = adjustments + 1;
-					if(Esp.verbose,{
-						msg.postln;
-						[adjust,SystemClock.seconds,clockDiff,SystemClock.seconds+clockDiff].postln;
-						if(Main.respondsTo(\monotonicClockTime),{
-							Main.monotonicClockTime.postln;
-						});
-					});
+				| msg,t,addr,port |
+				var on = msg[1];
+				var freq = if(on==1,msg[2]/60,0.000000001);
+				var time = msg[3] + (msg[4]*0.000000001);
+				var beat = msg[5];
+				var target = (Date.getDate.rawSeconds + Esp.clockAdjust - time) * freq + beat;
+				var adjust = target - super.beats;
+				if((adjustments>10) && (adjust>1), {
+					"warning: EspClock adjustment greater than one beat".postln;
+					target = super.beats + 1;
 				});
+				super.beats_(target);
+				super.tempo_(freq);
+				adjustments = adjustments + 1;
+				if(Esp.verbose,{msg.postln});
 			},"/esp/tempo/r").permanent_(true);
         SkipJack.new( {Esp.send.sendMsg("/esp/tempo/q");}, 0.05, clock: SystemClock);
-	}
-
-	espClockQ {
-		// this method is meant to be used as a workaround on systems where Main.monotonicClockTime
-		// is not reporting (or not reporting accurately) the lowest level monotonic motherboard clock.
-		OSCdef(\espClock,
-			{
-				| msg,time,addr,port |
-				if(Esp.verbose,{msg.postln});
-				clockDiff = msg[1]+(msg[2]*0.000000001) - SystemClock.seconds;
-				("new clockDiff is " ++ (clockDiff.asString)).postln;
-			},"/esp/clock/r").permanent_(true);
-		Esp.send.sendMsg("/esp/clock/q");
 	}
 
 }
