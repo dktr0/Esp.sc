@@ -2,7 +2,7 @@
   \name: "Esp.sc",
   \path: "Esp.sc",
   \summary: "Integration with EspGrid",
-  \version: 0.56.1, // version of EspGrid at time of last change to this Quark
+  \version: 0.56, // version of EspGrid at time of last change to this Quark
   \isCompatible: { Main.versionAtMost(3,6).not },
   \author: "David Ogborn",
   \organisation: "McMaster University",
