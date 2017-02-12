@@ -1,90 +1,81 @@
 /*
-Esp -- SuperCollider classes to connect with EspGrid (classes Esp and EspClock)
+Esp -- SuperCollider classes to connect with EspGrid/espgridd (classes Esp and EspClock)
 by David Ogborn <ogbornd@mcmaster.ca>
 
-Installation Instructions:
-1. Place this file in your SuperCollider extensions folder
-2. Launch SuperCollider (or Reboot Interpreter, or Recompile Class Library)
+Basic usage:
+Launch the EspGrid or espgridd applications through your operating system
+Create an EspClock and make it the default: TempoClock.default = EspClock.new;
+If no one else has started the tempo: TempoClock.default.start;
+Change the tempo as per normal SC practice: TempoClock.tempo = 104/60;
+Chat with other ensemble members: Esp.chat("hi there");
 
-Examples of Use:
+First-time usage: If you are using EspGrid for the first time you should set your name
+and machine name on the EspGrid network (EspGrid/espgridd remembers this for next time):
+Esp.person = "d0kt0r0";
+Esp.machine = "laptop";
 
+Some less common but still useful usages:
+Esp.start; // just start communication with EspGrid without chatting or making a clock
 Esp.version; // display version of this SC extension (and verify that it is installed!)
 Esp.gridVersion; // see what version of EspGrid is running
-
-// Configuration:
-// Note that all of these configuration methods are persistent - generally speaking
-// EspGrid/espgridd remembers them between sessions. So you would normally only use these methods
-// when using EspGrid/espgridd for the first time or when making changes to the configuration
-
-Esp.person = "David"; // set your name on the grid
-Esp.person; // check your name on the grid
-Esp.machine = "Macbook"; // identify the machine on the grid
-Esp.broadcast = "10.0.0.7"; // change the broadcast address (if necessary)
+Esp.person; // see what the person name in EspGrid is
+Esp.machine; // see what the
+Esp.broadcast = "10.0.0.7"; // change the EspGrid broadcast address (if necessary)
+Esp.broadcast; // check what the current Espgrid broadcast address is
 Esp.clockMode = 5; // change the clock sync mode (see EspGrid documentation)
-
-// Chat
-// Received chat messages appear in the SuperCollider post window
-Esp.chat("hi there"); // send a chat message with EspGrid
-
-// TempoClock synchronization
-TempoClock.default = EspClock.new; // make the default clock a new EspClock
-TempoClock.default.start; // if the beat is paused/was-never-started, make it go
-TempoClock.tempo = 1.8; // change tempo in normal SC way (all changes shared via EspGrid)
 TempoClock.default.pause; // pause the beat
+Esp.clockAdjust = 0.2; // slide synced tempo/metre forward in time
+// the line above is useful when specific SC setups make sound a fixed time later than
+// other synced setups, i.e. because of differences in the latencies of the audio system.
+// This is typically preferable to reducing the SC server latency (because you keep the
+// advantages of having a server latency). The default clockAdjust is 0.
 
 // END of help/documentation
 */
 
 Esp {
 	// public properties
-    classvar <version; // a string describing the update-date of this class definition
-	classvar <gridAddress; // string pointing to network location of EspGrid (normally loopback)
-	classvar <send; // cached NetAddr for communication from SC to EspGrid
-    classvar <>clockAdjust; // manual adjustment for when you have a high latency, remote EspGrid (NOT recommended)
-
-	classvar <person;
-	classvar <machine;
-	classvar <broadcast;
-	classvar <clockMode;
-	classvar <gridVersion;
-
-	classvar <>verbose; // set to true for detailed logging to console
-
-	*gridAddress_ {
-		|x|
-		gridAddress = x;
-		send = NetAddr(gridAddress,5510);
-		send.sendMsg("/esp/subscribe");
-	}
-
-	*person_ { |x| send.sendMsg("/esp/person/s",x); send.sendMsg("/esp/person/q"); }
-	*machine_ { |x| send.sendMsg("/esp/machine/s",x); send.sendMsg("/esp/machine/q"); }
-	*broadcast_ { |x| send.sendMsg("/esp/broadcast/s",x); send.sendMsg("/esp/broadcast/q"); }
-	*clockMode_ { |x| send.sendMsg("/esp/clockMode/s",x); send.sendMsg("/esp/clockMode/q"); }
-	*chat { |x| send.sendMsg("/esp/chat/send",x); }
+	classvar version; // a string describing the update-date of this class definition
+	classvar gridAddress; // string pointing to network location of EspGrid (normally loopback)
+	classvar send; // cached NetAddr for communication from SC to EspGrid
+	classvar clockAdjust; // manual adjustment for when you have a high latency, remote EspGrid (NOT recommended)
+	classvar person;
+	classvar machine;
+	classvar broadcast;
+	classvar clockMode;
+	classvar gridVersion;
+	classvar started;
+	classvar verbose; // set to true for detailed logging to console
 
 	*initClass {
-		version = "1 January 2016";
-		("Esp.sc: " + version).postln;
-		" recommended minimum EspGrid version to use with this Esp.sc: 0.54.0".postln;
-		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
-			" WARNING: SuperCollider 3.7 or higher is required".postln;
-		});
+		started = false;
+		version = "12February2016a";
 		verbose = false;
-		Esp.gridAddress = "127.0.0.1";
+		gridAddress = "127.0.0.1";
 		clockAdjust = 0.0;
+	}
 
-		StartUp.add {
-			OSCdef(\espChat,{ |m,t,a,p| (m[1] ++ " says: " ++ m[2]).postln; },"/esp/chat/receive").permanent_(true);
-			OSCdef(\espPerson,{|m,t,a,p|person=m[1]},"/esp/person/r").permanent_(true);
-			OSCdef(\espMachine,{|m,t,a,p|machine=m[1]},"/esp/machine/r").permanent_(true);
-			OSCdef(\espBroadcast,{|m,t,a,p|broadcast=m[1]},"/esp/broadcast/r").permanent_(true);
-			OSCdef(\espClockMode,{|m,t,a,p|clockMode=m[1];},"/esp/clockMode/r").permanent_(true);
-			OSCdef(\espVersion,{|m,t,a,p|gridVersion=m[1];},"/esp/version/r").permanent_(true);
-		};
+	*startIfNecessary {
+		if(not(started),{Esp.start});
+	}
+
+	*start {
+		started = true; // this has to be done first to avoid potential for infinite recursion
+		("starting Esp.sc, version" + version + "(for EspGrid 0.57.0 or higher)").postln;
+		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
+			" WARNING: SuperCollider 3.7 or higher is required by Esp.sc".postln;
+		});
+
+		OSCdef(\espChat,{ |m,t,a,p| (m[1] ++ " says: " ++ m[2]).postln; },"/esp/chat/receive").permanent_(true);
+		OSCdef(\espPerson,{|m,t,a,p|person=m[1];},"/esp/person/r").permanent_(true);
+		OSCdef(\espMachine,{|m,t,a,p|machine=m[1]},"/esp/machine/r").permanent_(true);
+		OSCdef(\espBroadcast,{|m,t,a,p|broadcast=m[1]},"/esp/broadcast/r").permanent_(true);
+		OSCdef(\espClockMode,{|m,t,a,p|clockMode=m[1];},"/esp/clockMode/r").permanent_(true);
+		OSCdef(\espVersion,{|m,t,a,p|gridVersion=m[1];},"/esp/version/r").permanent_(true);
 
 		// resend subscription and query basic settings every 3 seconds in case EspGrid
 		// is started later than SuperCollider, or restarted
+		Esp.gridAddress = gridAddress; // called to create initial NetAddr
 		SkipJack.new( {
 			Esp.send.sendMsg("/esp/subscribe");
 			Esp.send.sendMsg("/esp/person/q");
@@ -93,8 +84,37 @@ Esp {
 			Esp.send.sendMsg("/esp/clockMode/q");
 			Esp.send.sendMsg("/esp/version/q");
 		}, 2, clock: SystemClock);
-
 	}
+
+	*gridAddress_ {
+		|x|
+		gridAddress = x;
+		send = NetAddr(gridAddress,5510);
+		send.sendMsg("/esp/subscribe");
+		Esp.startIfNecessary;
+	}
+
+	// all setters and getters call Esp.startIfNecessary
+	// so that any use of the Esp class has an implicit Esp.start
+
+	*gridAddress { Esp.startIfNecessary; ^gridAddress; }
+	*send { Esp.startIfNecessary; ^send; }
+	*clockAdjust { Esp.startIfNecessary; ^clockAdjust; }
+	*clockAdjust_ { |x| Esp.startIfNecessary; clockAdjust = x; }
+	*started { Esp.startIfNecessary; ^started; }
+	*person { Esp.startIfNecessary; ^person; }
+	*person_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/person/s",x); send.sendMsg("/esp/person/q"); }
+	*machine { Esp.startIfNecessary; ^machine; }
+	*machine_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/machine/s",x); send.sendMsg("/esp/machine/q"); }
+	*broadcast { Esp.startIfNecessary; ^broadcast; }
+	*broadcast_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/broadcast/s",x); send.sendMsg("/esp/broadcast/q"); }
+	*clockMode { Esp.startIfNecessary; ^clockMode; }
+	*clockMode_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/clockMode/s",x); send.sendMsg("/esp/clockMode/q"); }
+	*version { Esp.startIfNecessary; ^version; }
+	*gridVersion { Esp.startIfNecessary; ^gridVersion; }
+	*chat { |x| Esp.startIfNecessary; send.sendMsg("/esp/chat/send",x); }
+	*verbose { Esp.startIfNecessary; ^verbose; }
+	*verbose_ { |x| Esp.startIfNecessary; verbose=x; }
 }
 
 
