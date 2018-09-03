@@ -11,8 +11,7 @@ Chat with other ensemble members: Esp.chat("hi there");
 
 First-time usage: If you are using EspGrid for the first time you should set your name
 and machine name on the EspGrid network (EspGrid/espgridd remembers this for next time):
-Esp.person = "d0kt0r0";
-Esp.machine = "laptop";
+Esp.person = "d0kt0r0"; // set it to something 15 characters or less long...
 
 Some less common but still useful usages:
 Esp.start; // just start communication with EspGrid without chatting or making a clock
@@ -48,7 +47,7 @@ Esp {
 
 	*initClass {
 		started = false;
-		version = "12February2016a";
+		version = "2Sept2018a";
 		verbose = false;
 		gridAddress = "127.0.0.1";
 		clockAdjust = 0.0;
@@ -60,7 +59,7 @@ Esp {
 
 	*start {
 		started = true; // this has to be done first to avoid potential for infinite recursion
-		("starting Esp.sc, version" + version + "(for EspGrid 0.57.0 or higher)").postln;
+		("starting Esp.sc, version" + version + "(for EspGrid 0.58.1 or higher)").postln;
 		if(Main.scVersionMajor<3 || (Main.scVersionMajor==3 && Main.scVersionMinor<7),{
 			" WARNING: SuperCollider 3.7 or higher is required by Esp.sc".postln;
 		});
