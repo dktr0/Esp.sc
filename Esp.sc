@@ -67,7 +67,6 @@ Esp {
 
 		OSCdef(\espChat,{ |m,t,a,p| (m[1] ++ " says: " ++ m[2]).postln; },"/esp/chat/receive").permanent_(true);
 		OSCdef(\espPerson,{|m,t,a,p|person=m[1];},"/esp/person/r").permanent_(true);
-		OSCdef(\espMachine,{|m,t,a,p|machine=m[1]},"/esp/machine/r").permanent_(true);
 		OSCdef(\espBroadcast,{|m,t,a,p|broadcast=m[1]},"/esp/broadcast/r").permanent_(true);
 		OSCdef(\espClockMode,{|m,t,a,p|clockMode=m[1];},"/esp/clockMode/r").permanent_(true);
 		OSCdef(\espVersion,{|m,t,a,p|gridVersion=m[1];},"/esp/version/r").permanent_(true);
