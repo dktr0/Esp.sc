@@ -40,7 +40,6 @@ Esp {
 	classvar send; // cached NetAddr for communication from SC to EspGrid
 	classvar clockAdjust; // manual adjustment for when you have a high latency, remote EspGrid (NOT recommended)
 	classvar person;
-	classvar machine;
 	classvar broadcast;
 	classvar clockMode;
 	classvar gridVersion;
@@ -79,7 +78,6 @@ Esp {
 		SkipJack.new( {
 			Esp.send.sendMsg("/esp/subscribe");
 			Esp.send.sendMsg("/esp/person/q");
-			Esp.send.sendMsg("/esp/machine/q");
 			Esp.send.sendMsg("/esp/broadcast/q");
 			Esp.send.sendMsg("/esp/clockMode/q");
 			Esp.send.sendMsg("/esp/version/q");
@@ -104,8 +102,6 @@ Esp {
 	*started { Esp.startIfNecessary; ^started; }
 	*person { Esp.startIfNecessary; ^person; }
 	*person_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/person/s",x); send.sendMsg("/esp/person/q"); }
-	*machine { Esp.startIfNecessary; ^machine; }
-	*machine_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/machine/s",x); send.sendMsg("/esp/machine/q"); }
 	*broadcast { Esp.startIfNecessary; ^broadcast; }
 	*broadcast_ { |x| Esp.startIfNecessary; send.sendMsg("/esp/broadcast/s",x); send.sendMsg("/esp/broadcast/q"); }
 	*clockMode { Esp.startIfNecessary; ^clockMode; }
